@@ -8,6 +8,20 @@
     </h1>
   </header>
 
+  <div id="searchInput" class="container mt-4 d-flex justify-content-center">
+    <div class="input-group">
+      <input
+          v-model="searchQuery"
+          @keyup.enter="handleSearch"
+          type="text"
+          class="form-control"
+          placeholder="Search games..."
+      />
+      <button @click="handleSearch" class="btn btn-primary">
+        Search
+      </button>
+    </div>
+  </div>
 
 
   <div class="container mx-auto">
