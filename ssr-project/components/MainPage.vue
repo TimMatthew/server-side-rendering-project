@@ -1,35 +1,41 @@
 <template>
   <link href="https://fonts.cdnfonts.com/css/games" rel="stylesheet">
+
   <header
-          class="mb-4 d-flex align-items-center"
-          style="gap: 1rem; font-family: 'Games', sans-serif;">
-    <h1 class="bg-black text-white text-center flex-grow-1" style="padding: 1vh;">
+      class="mb-4 d-flex flex-column align-items-center w-100"
+      style="gap: 1rem; font-family: 'Games', sans-serif; background-color: black;"
+  >
+    <h1 class="text-white text-center" style="font-size: 5rem;">
       Games List
     </h1>
-  </header>
 
-  <div id="searchInput" class="container mt-4 d-flex justify-content-center">
-    <div class="input-group">
+    <div class="input-group mb-3"
+         style="max-width: 500px; width: 100%; font-family: var(--bs-body-font-family),serif; background-color: black;">
       <input
           v-model="searchQuery"
-          @keyup.enter="handleSearch"
+          @keyup.enter="filterGames"
           type="text"
           class="form-control"
           placeholder="Search games..."
       />
-      <button @click="handleSearch" class="btn btn-primary">
+      <button class="btn btn-primary" type="button" @click="filterGames">
         Search
       </button>
     </div>
-  </div>
+  </header>
+
 
 
   <div class="container mx-auto">
-    <div class="row row-cols-1 g-4">
+    <div v-if="pending" class="text-center">
+      <p>Loading...</p>
+    </div>
+
+    <div v-else class="row row-cols-1 g-4">
       <div v-for="game in games" :key="game._id" class="col">
         <div class="card h-100 shadow-sm border-primary position-relative">
           <span
-              class="position-absolute top-0 end-0 m-2 badge rounded-circle bg-success"
+              class="position-absolute top-0 end-0 m-2 badge rounded-circle"
               :class="getRatingColor(game.metacritic_rating)"
               style="width: 40px; height: 40px; display: flex; align-items: center; justify-content: center; font-size: 1rem; margin-top: 10px; margin-right: 10px"
           >
@@ -51,7 +57,6 @@
               <strong>Genres:</strong> {{ game.genres.join(', ') }}
             </p>
           </div>
-
         </div>
       </div>
     </div>
@@ -60,8 +65,14 @@
 </template>
 
 <script setup>
+import { useAsyncData, useRoute, useRouter } from '#imports'
+import {onMounted, ref} from 'vue'
 
-import { onMounted } from 'vue'
+const router = useRouter()
+const route = useRoute()
+
+const searchQuery = ref('')
+
 onMounted(() => {
   const nuxt = document.getElementById("__nuxt")
   if (nuxt) {
@@ -74,38 +85,39 @@ onMounted(() => {
   }
 })
 
-import { useAsyncData } from '#app';
-const { data: games } = await useAsyncData('games', async () => {
+const { data: games, pending} = await useAsyncData('games', async (ctx) => {
+  const search = ctx.ssrContext?.event?.req?.url.includes('search=')
+      ? new URLSearchParams(ctx.ssrContext.event.req.url.split('?')[1]).get('search')
+      : (route.query.search || '')
 
-  const response = await fetch('http://localhost:5000/api/games');
+  const url = search
+      ? `http://localhost:5000/api/filter?search=${encodeURIComponent(search)}`
+      : 'http://localhost:5000/api/games'
+
+  const response = await fetch(url)
   if (!response.ok) {
-    throw new Error('Failed to fetch games');
+    throw new Error('Failed to fetch games')
   }
-  return await response.json();
+  return await response.json()
+}, {
+  watch: [() => route.query.search],
+})
 
-});
+if (process.client) {
+  searchQuery.value = route.query.search || ''
+}
+
+const filterGames = () => {
+  if (!searchQuery.value.trim()) {
+    router.push({ path: router.currentRoute.value.path, query: {} })
+  } else {
+    router.push({ query: { search: searchQuery.value.trim() } })
+  }
+}
 
 const getRatingColor = (rating) => {
   if (rating >= 90) return 'bg-success'
   else if (rating >= 70) return 'bg-warning text-dark'
   else return 'bg-danger'
 }
-
 </script>
-
-<style lang="css" scoped>
-
-@import url('https://fonts.cdnfonts.com/css/games');
-
-.container.my-5 {
-  margin-bottom: 0 !important;
-  margin-top: 0 !important;
-  padding-bottom: 3rem !important;
-  padding-top: 3rem !important;
-}
-
-.bg-black{
-  font-size: 5rem;
-}
-</style>
-

@@ -45,11 +45,12 @@ class GamesDAO {
 
     static async getGamesByFilter(filters) {
         try {
-            return await Game.find(filters, null, null);
+            return await Game.find(filters);
         } catch (err) {
             throw new Error("Error fetching filtered games: " + err.message);
         }
     }
+
 
     static async getTopRatedGames() {
         try {
